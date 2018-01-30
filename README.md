@@ -10,16 +10,17 @@ Below is an overview of Cloud Custodian; more information is in the [docs](http:
 
 ## Prerequisites
 
-Install python, pip, and virtualenv
+Install python, pip, and [Pipenv](https://github.com/pypa/pipenv)
 
 ## Installation
 
 To install Cloud Custodian, run:
 
 ``` bash
-$ virtualenv --python=python2 custodian
-$ source custodian/bin/activate
-(custodian) $ pip install c7n
+$ git clone this repo
+$ pipenv install
+$ pipenv shell
+(custodian) $ custodian -h
 ```
 
 ## Concepts and Terms
