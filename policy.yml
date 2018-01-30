@@ -1,0 +1,16 @@
+policies:
+  - name: ec2-terminate-old-instances
+    resource: ec2
+    mode:
+      role: arn:aws:iam::842337631775:role/custodian-ec2
+      type: periodic
+      schedule: "rate(1 day)"
+    comment: |
+      # Terminate all instances that are tagged Custodian and older than 30 days
+    filters:
+      - "tag:Custodian": present
+      - "tag:CreatedBy": stephanie
+      - type: instance-age
+        days: 30
+    actions:
+      - terminate
