@@ -2,9 +2,11 @@
 
 ## How It Works
 
-Cloud Custodian is a rules engine for managing AWS resources at scale. You define the rules that your resources should follow, and Cloud Custodian automatically provisions event sources and lambda functions to enforce those rules. Instead of writing custom serverless workflows, you can manage resources across all of your accounts via simple YML files.
+[Cloud Custodian](https://developer.capitalone.com/opensource-projects/cloud-custodian) is a rules engine for managing AWS resources at scale. You define the rules that your resources should follow, and Cloud Custodian automatically provisions event sources and lambda functions to enforce those rules. Instead of writing custom serverless workflows, you can manage resources across all of your accounts via simple YML files.
 
 The policy specified in the accompanying `policy.yml` file will execute once a day, and will delete all instances tagged `Custodian` that are older than 30 days.
+
+Below is an overview of Cloud Custodian; more information is in the [docs](http://capitalone.github.io/cloud-custodian/docs/index.html).
 
 ## Prerequisites
 
