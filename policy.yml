@@ -6,10 +6,11 @@ policies:
       type: periodic
       schedule: "rate(1 day)"
     comment: |
-      # Terminate all instances that are tagged Custodian and older than 30 days
+      # Terminate all instances that are tagged Custodian, older than 30 days, and in the default VPC
     filters:
       - "tag:Custodian": present
       - "tag:CreatedBy": stephanie
+      - "VpcId": "vpc-559b2731"
       - type: instance-age
         days: 30
     actions:

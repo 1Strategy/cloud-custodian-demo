@@ -20,7 +20,7 @@ To install Cloud Custodian, run:
 $ git clone this repo
 $ pipenv install
 $ pipenv shell
-(custodian) $ custodian -h
+$ custodian -h
 ```
 
 ## Concepts and Terms
@@ -29,7 +29,7 @@ $ pipenv shell
 - **Resource** Within your policy, you write filters and actions to apply to different resource types (e.g. EC2, S3, RDS, etc.). Resources are retrieved via the AWS API; each resource type has different filters and actions that can be applied to it.
 - **Filter** Filters are used to target the specific subset of resources that we're interested in. Some examples: EC2 instances more than 90 days old; S3 buckets that violate tagging conventions.
 - **Action** Once you've filtered a given list of resources to your liking, you apply actions to those resources. Actions are verbs: e.g. stop, start, encrypt.
-- **Mode** The mode specifies how the resource rule will execute. When deploying long-running rules (vs. a one-time enforcement), these modes are used:
+- **Mode** `Mode` specifies how you would like the policy to be deployed. (If you simply want to execute the policy once, from the CLI, you do not need `mode`.) The mode specifies how the resource rule will execute, and which events the deployed lambda will respond to. Some common modes are:
   - `config-rule`: Executes as an AWS Config rule
   - `cloud-trail`: Executes in response to CloudTrail events
   - `periodic`: Executes on a cron schedule
