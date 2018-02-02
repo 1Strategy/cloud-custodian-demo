@@ -27,12 +27,9 @@ $ custodian -h
 
 - **Policy** Policies first specify a resource type, then filter those resources, and finally apply actions to those selected resources. Policies are written in YML format.
 - **Resource** Within your policy, you write filters and actions to apply to different resource types (e.g. EC2, S3, RDS, etc.). Resources are retrieved via the AWS API; each resource type has different filters and actions that can be applied to it.
-- **Filter** Filters are used to target the specific subset of resources that we're interested in. Some examples: EC2 instances more than 90 days old; S3 buckets that violate tagging conventions.
-- **Action** Once you've filtered a given list of resources to your liking, you apply actions to those resources. Actions are verbs: e.g. stop, start, encrypt.
-- **Mode** `Mode` specifies how you would like the policy to be deployed. (If you simply want to execute the policy once, from the CLI, you do not need `mode`.) The mode specifies how the resource rule will execute, and which events the deployed lambda will respond to. Some common modes are:
-  - `config-rule`: Executes as an AWS Config rule
-  - `cloud-trail`: Executes in response to CloudTrail events
-  - `periodic`: Executes on a cron schedule
+- **Filter** [Filters](https://capitalone.github.io/cloud-custodian/docs/policy/index.html) are used to target the specific subset of resources that we're interested in. Some examples: EC2 instances more than 90 days old; S3 buckets that violate tagging conventions.
+- **Action** Once you've filtered a given list of resources to your liking, you apply [actions](https://capitalone.github.io/cloud-custodian/docs/policy/index.html) to those resources. Actions are verbs: e.g. stop, start, encrypt.
+- **Mode** `Mode` specifies how you would like the policy to be deployed. If no mode is given, the policy will be executed once, from the CLI, and no lambda will be created. If your policy contains a `mode`, then a lambda will be created, plus any other resources required to trigger that lambda (e.g. CloudWatch event, Config rule, etc.). Check out the [More About Modes](#modes) section for more info.
 
 ## Working with the `policy.yml` file
 
@@ -143,3 +140,144 @@ custodian run -s . policy.yml
 ```
 
 Cloud Custodian will take care of creating the needed lambda functions, CloudWatch events, etc. Sit back and watch it work!
+
+## <a name="modes">More About Modes</a>
+
+Cloud Custodian generally has very good documentation; the `mode` options, however, are less well documented. Here are the different mode types, what they do, and what their `yml` block should look like:
+
+### asg-instance-state
+
+`asg-instance-state` triggers the lambda in response to [Auto Scaling group state events](https://docs.aws.amazon.com/autoscaling/ec2/userguide/cloud-watch-events.html) (e.g. Auto Scaling launched an instance). The four events supported are:
+
+| yml option | AWS ASG event `detail-type` |
+| ---------- | --------------------------- |
+|`launch-success` | "EC2 Instance Launch Successful" |
+|`launch-failure` | "EC2 Instance Launch Unsuccessful" |
+|`terminate-success` | "EC2 Instance Terminate Successful" |
+|`terminate-failure` | "EC2 Instance Terminate Unsuccessful" |
+
+Example:
+
+``` yml
+mode:
+    role: #ARN of the IAM role you want the lambda to use
+    type: asg-instance-state
+    events:
+        - launch-success
+```
+
+### cloudtrail
+
+`cloudtrail` triggers the lambda in response to [CloudTrail events](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference.html). The `cloudtrail` type comes in a couple different flavors: events for which there are shortcuts, and all other events.
+
+#### Shortcuts
+
+For very common API calls, Cloud Custodian has defined some [shortcuts](https://github.com/capitalone/cloud-custodian/blob/master/c7n/cwe.py#L28-L84) to target commonly-used CloudTrail events.
+
+As of this writing, the available shortcuts are:
+
+    - ConsoleLogin
+    - CreateAutoScalingGroup
+    - UpdateAutoScalingGroup
+    - CreateBucket
+    - CreateCluster
+    - CreateLoadBalancer
+    - CreateLoadBalancerPolicy
+    - CreateDBInstance
+    - CreateVolume
+    - SetLoadBalancerPoliciesOfListener
+    - CreateElasticsearchDomain
+    - CreateTable
+    - RunInstances
+
+For those shortcuts, you simply need to specify:
+
+``` yml
+mode:
+    role: #ARN of the IAM role you want the lambda to use
+    type: cloudtrail
+    events:
+        - RunInstances
+```
+
+#### Other CloudTrail Events
+
+You can also trigger your lambda via any other CloudTrail event; you'll just have to add two more pieces of information. First, you need the source API call - e.g. `ec2.amazonaws.com`. Secondly, you need a JMESPath query to extract the resource IDs from the event. For example, if `RunInstances` wasn't already a shortcut, you would specify it like so:
+
+``` yml
+mode:
+    role: #ARN of the IAM role you want the lambda to use
+    type: cloudtrail
+    events:
+        - source: ec2.amazonaws.com
+          event: RunInstances
+          ids: "responseElements.instancesSet.items[].instanceId"
+
+```
+
+### config-rule
+
+`config-rule` creates a [custom Config Rule](https://docs.aws.amazon.com/config/latest/developerguide/evaluate-config_develop-rules.html) to trigger the lambda. Config rules themselves can only be triggered by configuration changes; triggering rules periodically is not supported. Use the `periodic` mode type instead.
+
+Example:
+
+``` yml
+mode:
+    role: #ARN of the IAM role you want the lambda to use
+    type: config-rule
+```
+
+### ec2-instance-state
+
+`ec2-instance-state` triggers the lambda in response to EC2 instance state events (e.g. an instance being created and entering `pending` state).
+
+Available states:
+
+    - pending
+    - running
+    - stopping
+    - stopped
+    - shutting-down
+    - terminated
+    - rebooting
+
+Example:
+
+``` yml
+mode:
+    role: #ARN of the IAM role you want the lambda to use
+    type: ec2-instance-state
+    events:
+        - pending
+```
+
+### guard-duty
+
+With `guard-duty`, your lambda will be triggered by [GuardDuty findings](https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_findings.html). The associated filters would then look at the guard duty event detail - e.g. `severity` or `type`.
+
+``` yml
+mode:
+    role: #ARN of the IAM role you want the lambda to use
+    type: periodic
+filters:
+    - type: event
+      key: detail.severity
+      op: gte
+      value: 4.5
+```
+
+### periodic
+
+`periodic` creates a CloudWatch event to trigger the lambda on a given schedule. The `schedule` is specified using [scheduler syntax](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html).
+
+Example:
+
+``` yml
+mode:
+    role: #ARN of the IAM role you want the lambda to use
+    type: periodic
+    schedule: "rate(1 day)"
+```
+
+### pull
+TODO: finish pull
