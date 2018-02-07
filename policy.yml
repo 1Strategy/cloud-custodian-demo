@@ -1,9 +1,27 @@
 policies:
+  - name: ec2-tag-instances
+    resource: ec2
+    # use cloudtrail event, not ec2-instance-state, when you need to filter on an instance's tags (tags aren't assigned yet when the ec2-instance-state changes to pending and/or running)
+    mode:
+      type: cloudtrail
+      role: arn:aws:iam::842337631775:role/custodian-ec2
+      events:
+        - RunInstances
+    comment: |
+      # Tag all instances with a Custodian tag, so they'll be subject to the auto-termination policy
+    filters:
+      - "tag:CreatedBy": stephanie
+      - "tag:Custodian": absent
+    actions:
+      - type: tag
+        key: Custodian
+        value: "true"
+
   - name: ec2-terminate-old-instances
     resource: ec2
     mode:
-      role: arn:aws:iam::842337631775:role/custodian-ec2
       type: periodic
+      role: arn:aws:iam::842337631775:role/custodian-ec2
       schedule: "rate(1 day)"
     comment: |
       # Terminate all instances that are tagged Custodian, older than 30 days, and in the default VPC

@@ -27,9 +27,9 @@ $ custodian -h
 
 - **Policy** Policies first specify a resource type, then filter those resources, and finally apply actions to those selected resources. Policies are written in YML format.
 - **Resource** Within your policy, you write filters and actions to apply to different resource types (e.g. EC2, S3, RDS, etc.). Resources are retrieved via the AWS API; each resource type has different filters and actions that can be applied to it.
-- **Filter** [Filters](https://capitalone.github.io/cloud-custodian/docs/policy/index.html) are used to target the specific subset of resources that we're interested in. Some examples: EC2 instances more than 90 days old; S3 buckets that violate tagging conventions.
+- **Filter** [Filters](https://capitalone.github.io/cloud-custodian/docs/policy/index.html) are used to target the specific subset of resources that you're interested in. Some examples: EC2 instances more than 90 days old; S3 buckets that violate tagging conventions.
 - **Action** Once you've filtered a given list of resources to your liking, you apply [actions](https://capitalone.github.io/cloud-custodian/docs/policy/index.html) to those resources. Actions are verbs: e.g. stop, start, encrypt.
-- **Mode** `Mode` specifies how you would like the policy to be deployed. If no mode is given, the policy will be executed once, from the CLI, and no lambda will be created. If your policy contains a `mode`, then a lambda will be created, plus any other resources required to trigger that lambda (e.g. CloudWatch event, Config rule, etc.). Check out the [More About Modes](#modes) section for more info.
+- **Mode** `Mode` specifies how you would like the policy to be deployed. If no mode is given, the policy will be executed once, from the CLI, and no lambda will be created. (This is often called `pull mode` in the documentation.) If your policy contains a `mode`, then a lambda will be created, plus any other resources required to trigger that lambda (e.g. CloudWatch event, Config rule, etc.). Check out the [More About Modes](#modes) section for more info.
 
 ## Working with the `policy.yml` file
 
@@ -278,6 +278,3 @@ mode:
     type: periodic
     schedule: "rate(1 day)"
 ```
-
-### pull
-TODO: finish pull
