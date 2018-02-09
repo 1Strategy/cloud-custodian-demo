@@ -10,7 +10,7 @@ policies:
     comment: |
       # Tag all instances with a Custodian tag, so they'll be subject to the auto-termination policy
     filters:
-      - "tag:CreatedBy": stephanie
+      - "KeyName": stephanielingwood
       - "tag:Custodian": absent
     actions:
       - type: tag
@@ -27,7 +27,7 @@ policies:
       # Terminate all instances that are tagged Custodian, older than 30 days, and in the default VPC
     filters:
       - "tag:Custodian": present
-      - "tag:CreatedBy": stephanie
+      - "KeyName": stephanielingwood
       - "VpcId": "vpc-559b2731"
       - type: instance-age
         days: 30

@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 
 # clone the repo
 # cd into cloned repo
