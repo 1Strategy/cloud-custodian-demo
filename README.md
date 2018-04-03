@@ -1,18 +1,46 @@
 # Cloud Custodian Resource Cleanup
 
-## How It Works
+- [How it Works](#how_it_works)
+- [The Demo Policies](#demo_policies)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Concepts and Terms](#concepts_and_terms)
+- [Working with Policies](#working_with_policies)
+- [More About Modes](#modes)
+
+## <a id="how_it_works"></a>How it Works
 
 [Cloud Custodian](https://developer.capitalone.com/opensource-projects/cloud-custodian) is a rules engine for managing AWS resources at scale. You define the rules that your resources should follow, and Cloud Custodian automatically provisions event sources and lambda functions to enforce those rules. Instead of writing custom serverless workflows, you can manage resources across all of your accounts via simple YML files.
 
-The policy specified in the accompanying `policy.yml` file will execute once a day, and will delete all instances tagged `Custodian` that are older than 30 days.
+Cloud Custodian documentation: [here](http://capitalone.github.io/cloud-custodian/docs/index.html)
 
-Below is an overview of Cloud Custodian; more information is in the [docs](http://capitalone.github.io/cloud-custodian/docs/index.html).
+## <a id="demo_policies"></a>The Demo Policies
 
-## Prerequisites
+All Cloud Custodian policies are contained in the `policy.yml` file. They are:
+
+### ec2-tag-instances
+
+This tags instances with `Custodian: true` as they enter the running state. All other policies are applied to resources with this tag. If a resource is not intended to be managed by Custodian policies, the tag can be removed.
+
+### change-underutilized-instance-type
+
+This watches for large instances that are running at less than 30% CPU utilization for a given period of time, and resizes them to the next-smaller instance type.
+
+The cost savings for this policy can be significant: a single m4.10xlarge instance, resized to a m4.4xlarge, will save $878.40 a month.
+
+### stop- and start-EC2-instances-offhours
+
+Together, these policies turn on instances during business hours (8 am to 8pm), and turn them off at nights and on weekends. Perfect for dev/test environments; if implemented, this results in a 65% decrease in instance costs. For a fleet of 3 m4.10xlarge instances, this equates to $2833 a month in savings.
+
+### ec2-terminate-old-instances
+
+This policy terminates instances that are older than 30 days. Not something you'd want to run in production, but ideal for sandbox/dev accounts where resources tend to get created...and forgotten. Cleaning up just 5 abandoned m4.xlarge instances (forgotten auto-scaling group, anyone?)results in a $732/month cost reduction.
+
+## <a id="prerequisites"></a>Prerequisites
 
 Install python, pip, and [Pipenv](https://github.com/pypa/pipenv)
 
-## Installation
+## <a id="installation"></a>Installation
 
 To install Cloud Custodian, run:
 
@@ -23,7 +51,7 @@ $ pipenv shell
 $ custodian -h
 ```
 
-## Concepts and Terms
+## <a id="concepts_and_terms"></a>Concepts and Terms
 
 - **Policy** Policies first specify a resource type, then filter those resources, and finally apply actions to those selected resources. Policies are written in YML format.
 - **Resource** Within your policy, you write filters and actions to apply to different resource types (e.g. EC2, S3, RDS, etc.). Resources are retrieved via the AWS API; each resource type has different filters and actions that can be applied to it.
@@ -31,7 +59,7 @@ $ custodian -h
 - **Action** Once you've filtered a given list of resources to your liking, you apply [actions](https://capitalone.github.io/cloud-custodian/docs/policy/index.html) to those resources. Actions are verbs: e.g. stop, start, encrypt.
 - **Mode** `Mode` specifies how you would like the policy to be deployed. If no mode is given, the policy will be executed once, from the CLI, and no lambda will be created. (This is often called `pull mode` in the documentation.) If your policy contains a `mode`, then a lambda will be created, plus any other resources required to trigger that lambda (e.g. CloudWatch event, Config rule, etc.). Check out the [More About Modes](#modes) section for more info.
 
-## Working with the `policy.yml` file
+## <a id="working_with_policies"></a>Working with Policies
 
 The EC2 instance policies are laid out in the `policy.yml` file.
 
@@ -141,9 +169,9 @@ custodian run -s . policy.yml
 
 Cloud Custodian will take care of creating the needed lambda functions, CloudWatch events, etc. Sit back and watch it work!
 
-## <a name="modes">More About Modes</a>
+## <a id="modes"></a>More About Modes
 
-Cloud Custodian generally has very good documentation; the `mode` options, however, are less well documented. Here are the different mode types, what they do, and what their `yml` block should look like:
+Modes can be confusing. Here are the different mode types, what they do, and what their `yml` block should look like:
 
 ### asg-instance-state
 

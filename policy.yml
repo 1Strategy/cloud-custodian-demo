@@ -1,4 +1,6 @@
 policies:
+
+ # tag instances
   - name: ec2-tag-instances
     resource: ec2
     # use cloudtrail event, not ec2-instance-state, when you need to filter on an instance's tags (tags aren't assigned yet when the ec2-instance-state changes to pending and/or running)
@@ -15,8 +17,68 @@ policies:
     actions:
       - type: tag
         key: Custodian
-        value: "true"
 
+# scale instance types
+  - name: change-underutilized-instance-type
+    resource: ec2
+    mode:
+      type: periodic
+      role: arn:aws:iam::842337631775:role/custodian-ec2
+      schedule: "rate(1 day)"
+      # default timeout of 60 seconds isn't long enough to resize
+      timeout: 180
+    filters:
+      - "tag:Custodian": present
+      - type: value
+        key: "InstanceType"
+        op: in
+        value:
+          - "m4.10xlarge"
+          - "m4.4xlarge"
+      - type: metrics
+        name: CPUUtilization
+        value: 30
+        op: less-than
+        days: 3
+        period: 86400
+    actions:
+      - type: resize
+        type-map:
+          m4.10xlarge: m4.4xlarge
+          m4.4xlarge: m4.2xlarge
+
+# turn instances off/on
+  - name: stop-EC2-instances-offhours
+    resource: ec2
+    mode:
+      type: periodic
+      role: arn:aws:iam::842337631775:role/custodian-ec2
+      schedule: "rate(15 minutes)"
+    filters:
+      - "tag:Custodian": present
+      - type: offhour
+        tag: offhours
+        default_tz: pt
+        offhour: 20
+    actions:
+      - stop
+
+  - name: start-EC2-instances-onhours
+    resource: ec2
+    mode:
+      type: periodic
+      role: arn:aws:iam::842337631775:role/custodian-ec2
+      schedule: "rate(15 minutes)"
+    filters:
+      - "tag:Custodian": present
+      - type: onhour
+        tag: offhours
+        default_tz: pt
+        onhour: 8
+    actions:
+      - start
+
+# terminate old instances; useful for sandbox/dev accounts
   - name: ec2-terminate-old-instances
     resource: ec2
     mode:
@@ -24,11 +86,9 @@ policies:
       role: arn:aws:iam::842337631775:role/custodian-ec2
       schedule: "rate(1 day)"
     comment: |
-      # Terminate all instances that are tagged Custodian, older than 30 days, and in the default VPC
+      # Terminate all instances that are tagged Custodian, and older than 30 days
     filters:
       - "tag:Custodian": present
-      - "KeyName": stephanielingwood
-      - "VpcId": "vpc-559b2731"
       - type: instance-age
         days: 30
     actions:
