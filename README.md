@@ -22,19 +22,23 @@ All Cloud Custodian policies are contained in the `policy.yml` file. They are:
 
 This tags instances with `Custodian: true` as they enter the running state. All other policies are applied to resources with this tag. If a resource is not intended to be managed by Custodian policies, the tag can be removed.
 
-### change-underutilized-instance-type
+### ec2-change-underutilized-instance-type
 
 This watches for large instances that are running at less than 30% CPU utilization for a given period of time, and resizes them to the next-smaller instance type.
 
 The cost savings for this policy can be significant: a single m4.10xlarge instance, resized to a m4.4xlarge, will save $878.40 a month.
 
-### stop- and start-EC2-instances-offhours
+### ec2-stop- and start-instances-offhours
 
 Together, these policies turn on instances during business hours (8 am to 8pm), and turn them off at nights and on weekends. Perfect for dev/test environments; if implemented, this results in a 65% decrease in instance costs. For a fleet of 3 m4.10xlarge instances, this equates to $2833 a month in savings.
 
 ### ec2-terminate-old-instances
 
 This policy terminates instances that are older than 30 days. Not something you'd want to run in production, but ideal for sandbox/dev accounts where resources tend to get created...and forgotten. Cleaning up just 5 abandoned m4.xlarge instances (forgotten auto-scaling group, anyone?)results in a $732/month cost reduction.
+
+### ebs-delete-unattached-volumes
+
+What to do with orphaned EBS volumes you're no longer using? Delete them! This deletes any EBS volume that's not attached to an instance.
 
 ## <a id="prerequisites"></a>Prerequisites
 
@@ -119,6 +123,7 @@ Before running the policy, you'll need to give the resulting lambda function the
         {
             "Effect": "Allow",
             "Action": [
+                "cloudwatch:GetMetricStatistics",
                 "cloudwatch:PutMetricData"
             ],
             "Resource": "*"
@@ -126,7 +131,11 @@ Before running the policy, you'll need to give the resulting lambda function the
         {
             "Effect": "Allow",
             "Action": [
-                "ec2:DescribeInstances"
+                "ec2:DescribeInstances",
+                "ec2:CreateTags",
+                "ec2:StopInstances",
+                "ec2:StartInstances",
+                "ec2:ModifyInstanceAttribute"
             ],
             "Resource": "*"
         },
@@ -136,6 +145,13 @@ Before running the policy, you'll need to give the resulting lambda function the
                 "ec2:TerminateInstances"
             ],
             "Resource": "arn:aws:ec2:us-west-2:*:instance/*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DeleteVolume"
+            ],
+            "Resource": "arn:aws:ec2:us-west-2:*:volume/*"
         }
     ]
 }

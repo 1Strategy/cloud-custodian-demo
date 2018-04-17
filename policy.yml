@@ -12,14 +12,13 @@ policies:
     comment: |
       # Tag all instances with a Custodian tag, so they'll be subject to the auto-termination policy
     filters:
-      - "KeyName": stephanielingwood
       - "tag:Custodian": absent
     actions:
       - type: tag
         key: Custodian
 
 # scale instance types
-  - name: change-underutilized-instance-type
+  - name: ec2-change-underutilized-instance-type
     resource: ec2
     mode:
       type: periodic
@@ -48,7 +47,7 @@ policies:
           m4.4xlarge: m4.2xlarge
 
 # turn instances off/on
-  - name: stop-EC2-instances-offhours
+  - name: ec2-stop-instances-offhours
     resource: ec2
     mode:
       type: periodic
@@ -63,7 +62,7 @@ policies:
     actions:
       - stop
 
-  - name: start-EC2-instances-onhours
+  - name: ec2-start-instances-onhours
     resource: ec2
     mode:
       type: periodic
@@ -93,3 +92,16 @@ policies:
         days: 30
     actions:
       - terminate
+
+# delete unattached EBS volumes
+  - name: ebs-delete-unattached-volumes
+    resource: ebs
+    mode:
+      type: periodic
+      role: arn:aws:iam::842337631775:role/custodian-ec2
+      schedule: "rate(1 day)"
+    filters:
+      - "tag:Custodian": present
+      - Attachments: []
+    actions:
+      - delete
