@@ -1,0 +1,64 @@
+# Note: IAM policies must be run in us-east-1
+
+policies:
+
+#==================
+# IAM
+#==================
+
+  # Policy with admin privileges attached to a group, role, or user
+  - name: iam-policy-notify-on-admin-policy-attachment
+    resource: iam-policy
+    mode:
+      type: cloudtrail
+      role: arn:aws:iam::842337631775:role/cloud-custodian-demo
+      events:
+        - source: iam.amazonaws.com
+          event: AttachGroupPolicy
+          ids: "requestParameters.policyArn"
+        - source: iam.amazonaws.com
+          event: AttachRolePolicy
+          ids: "requestParameters.policyArn"
+        - source: iam.amazonaws.com
+          event: AttachUserPolicy
+          ids: "requestParameters.policyArn"
+    filters:
+      - or:
+        - type: has-allow-all # this looks for any other policy with * on * privileges
+        - type: value # this looks for the AWS-managed admin policy
+          key: PolicyName
+          value: AdministratorAccess
+    actions:
+      - type: notify
+        template: default
+        subject: 'IAM Policy with Admin Privileges was Attached to a Group, Role, or User'
+        to:
+          - arn:aws:sns:us-west-2:842337631775:cloud-custodian-mailer
+        transport:
+          type: sqs
+          queue: https://sqs.us-west-2.amazonaws.com/842337631775/cloud-custodian-mailer
+
+  # Policy created or updated with * on * permissions
+  - name: iam-policy-notify-on-admin-policy-creation
+    resource: iam-policy
+    mode:
+      type: cloudtrail
+      role: arn:aws:iam::842337631775:role/cloud-custodian-demo
+      events:
+        - source: iam.amazonaws.com
+          event: CreatePolicy
+          ids: "responseElements.policy.arn"
+        - source: iam.amazonaws.com
+          event: CreatePolicyVersion
+          ids: "requestParameters.policyArn"
+    filters:
+      - type: has-allow-all
+    actions:
+      - type: notify
+        template: default
+        subject: 'IAM Policy Created or Updated with Admin Access'
+        to:
+          - arn:aws:sns:us-west-2:842337631775:cloud-custodian-mailer
+        transport:
+          type: sqs
+          queue: https://sqs.us-west-2.amazonaws.com/842337631775/cloud-custodian-mailer

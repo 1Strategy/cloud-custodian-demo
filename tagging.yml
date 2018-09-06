@@ -1,0 +1,45 @@
+# these policies should be run in the region containing your resources
+
+policies:
+
+#==================
+# EC2
+#==================
+
+ # Remind instance creators to tag their instances with a CostCenter tag
+  - name: ec2-notify-on-no-cost-center-tag
+    resource: ec2
+    # use cloudtrail event, not ec2-instance-state, when you need to filter on an instance's tags (this will let any tagging Lambdas that are triggered by instance creation events take effect first)
+    mode:
+      type: cloudtrail
+      role: arn:aws:iam::842337631775:role/custodian-ec2
+      events:
+        - RunInstances
+    filters:
+      - "tag:CostCenter": absent
+    actions:
+      - type: notify
+        template: default
+        subject: 'Instance missing CostCenter tag'
+        to:
+          - resource-owner # this will send an email to the one found in the OwnerContact tag
+        transport:
+          type: sqs
+          queue: https://sqs.us-west-2.amazonaws.com/842337631775/cloud-custodian-mailer
+
+ # tag Cloud Custodian-managed instances with Custodian tag
+  - name: ec2-tag-instances-with-custodian-tag
+    resource: ec2
+    # use cloudtrail event, not ec2-instance-state, when you need to filter on an instance's tags (this will let any tagging Lambdas that are triggered by instance creation events take effect first)
+    mode:
+      type: cloudtrail
+      role: arn:aws:iam::842337631775:role/custodian-ec2
+      events:
+        - RunInstances
+    comment: |
+      # Tag all instances with a Custodian tag, so they'll be subject to the auto-termination policy
+    filters:
+      - "tag:Custodian": absent
+    actions:
+      - type: tag
+        key: Custodian

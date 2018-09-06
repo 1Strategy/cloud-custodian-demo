@@ -1,0 +1,104 @@
+# IAM-related policies are in their own file, because all IAM policies need to be run in us-east-1 (where IAM lives)
+# the policies in this file should be run in the region containing your resources
+
+policies:
+
+#==================
+# S3
+#==================
+
+  # Remove public ACLs from buckets on creation or update
+  - name: s3-revoke-global-access
+    resource: s3
+    mode:
+      type: cloudtrail
+      role: arn:aws:iam::842337631775:role/cloud-custodian-demo
+      events:
+        - CreateBucket # "CreateBucket" is one of the shortcuts available in c7n to reference a specific CloudTrail event
+        - source: s3.amazonaws.com
+          event: PutBucketAcl # the PutBucketAcl event has no c7n shortcut, so here we use the standard method for selecting a CloudTrail event. Then, we use JMESpath to get the resource ID
+          ids: "requestParameters.bucketName"
+    filters:
+      - type: global-grants
+      - "tag:Custodian": present
+    actions:
+      - type: delete-global-grants
+        grantees:
+          - "http://acs.amazonaws.com/groups/global/AllUsers"
+          - "http://acs.amazonaws.com/groups/global/AuthenticatedUsers"
+      - type: notify
+        template: default
+        subject: 'Removed public ACL from S3 bucket'
+        to:
+          - arn:aws:sns:us-west-2:842337631775:cloud-custodian-mailer
+        transport:
+          type: sqs
+          queue: https://sqs.us-west-2.amazonaws.com/842337631775/cloud-custodian-mailer
+
+#==================
+# Security Groups
+#==================
+
+  # Remove security group rules with SSH open to the world
+  - name: security-group-revoke-global-ssh-on-creation
+    resource: security-group
+    mode:
+      type: cloudtrail
+      role: arn:aws:iam::842337631775:role/cloud-custodian-demo
+      events:
+        - source: ec2.amazonaws.com
+          event: AuthorizeSecurityGroupIngress
+          ids: "requestParameters.groupId"
+    filters:
+      - or:
+        - type: ingress # format in the docs doesn't work; this format does
+          FromPort: 22
+          Cidr:
+            value: "0.0.0.0/0"
+        - type: ingress
+          FromPort: 22
+          CidrV6: # use Cidr to match ipv4 rules; use CidrV6 to match ipv6 rules
+            value: "::/0"
+    actions:
+      - type: remove-permissions
+        ingress: matched
+      - type: notify
+        template: default
+        subject: 'Removed public SSH rule from security group'
+        to:
+          - arn:aws:sns:us-west-2:842337631775:cloud-custodian-mailer
+        transport:
+          type: sqs
+          queue: https://sqs.us-west-2.amazonaws.com/842337631775/cloud-custodian-mailer
+
+  # Remove security group rules with all tcp open to the world
+  - name: security-group-revoke-all-tcp-global-on-creation
+    resource: security-group
+    mode:
+      type: cloudtrail
+      role: arn:aws:iam::842337631775:role/cloud-custodian-demo
+      events:
+        - source: ec2.amazonaws.com
+          event: AuthorizeSecurityGroupIngress
+          ids: "requestParameters.groupId"
+    filters:
+      - or:
+          - type: ingress
+            FromPort: 0
+            Cidr:
+              value: 0.0.0.0/0
+          - type: ingress
+            ToPort: 65535
+            Cidr:
+              value: 0.0.0.0/0
+    actions:
+      - type: remove-permissions
+        ingress: matched
+      - type: notify
+        template: default
+        subject: 'Removed public rule from security group'
+        to:
+          - arn:aws:sns:us-west-2:842337631775:cloud-custodian-mailer
+        transport:
+          type: sqs
+          queue: https://sqs.us-west-2.amazonaws.com/842337631775/cloud-custodian-mailer

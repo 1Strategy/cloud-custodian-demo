@@ -2,6 +2,10 @@
 
 - [How it Works](#how_it_works)
 - [The Demo Policies](#demo_policies)
+  - [Cost Control](#cost)
+  - [Tagging Enforcement](#tagging)
+  - [Security - general resources](#security_general)
+  - [Security - IAM resources](#security_iam)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Concepts and Terms](#concepts_and_terms)
@@ -10,35 +14,84 @@
 
 ## <a id="how_it_works"></a>How it Works
 
-[Cloud Custodian](https://developer.capitalone.com/opensource-projects/cloud-custodian) is a rules engine for managing AWS resources at scale. You define the rules that your resources should follow, and Cloud Custodian automatically provisions event sources and lambda functions to enforce those rules. Instead of writing custom serverless workflows, you can manage resources across all of your accounts via simple YML files.
+[Cloud Custodian](https://developer.capitalone.com/opensource-projects/cloud-custodian) is a rules engine for managing AWS resources at scale. You define the rules that your resources should follow, and Cloud Custodian automatically provisions event sources and AWS Lambda functions to enforce those rules. Instead of writing custom serverless workflows, you can manage resources across all of your accounts via simple YAML files.
 
 Cloud Custodian documentation: [here](http://capitalone.github.io/cloud-custodian/docs/index.html)
 
 ## <a id="demo_policies"></a>The Demo Policies
 
-All Cloud Custodian policies are contained in the `policy.yml` file. They are:
+The policies are split out into four different files, to showcase the different uses of Cloud Custodian. Each Cloud Custodian policy file has a corresponding IAM policy file; this IAM policy contains the permissions required if you choose to execute the Cloud Custodian policy via a Lambda function.
 
-### ec2-tag-instances
+### <a id="cost"></a>Cost control
 
-This tags instances with `Custodian: true` as they enter the running state. All other policies are applied to resources with this tag. If a resource is not intended to be managed by Custodian policies, the tag can be removed.
+- Cloud Custodian policy file: `cost-control.yml`
+- IAM policy file: `cost-control-permissions.json`
 
-### ec2-change-underutilized-instance-type
+Policies:
+
+#### ec2-stop- and start-instances-offhours
+
+Together, these policies turn on instances during business hours (8 am to 8pm), and turn them off in the evening. Perfect for dev/test environments; if implemented, this results in a ~50% decrease in instance costs.
+
+#### ec2-change-underutilized-instance-type
 
 This watches for large instances that are running at less than 30% CPU utilization for a given period of time, and resizes them to the next-smaller instance type.
 
 The cost savings for this policy can be significant: a single m4.10xlarge instance, resized to a m4.4xlarge, will save $878.40 a month.
 
-### ec2-stop- and start-instances-offhours
+#### ec2-terminate-old-instances
 
-Together, these policies turn on instances during business hours (8 am to 8pm), and turn them off at nights and on weekends. Perfect for dev/test environments; if implemented, this results in a 65% decrease in instance costs. For a fleet of 3 m4.10xlarge instances, this equates to $2833 a month in savings.
+This policy terminates instances that are older than 30 days. Not something you'd want to run in production, but ideal for dev accounts where resources tend to get created...and forgotten. Cleaning up just 5 abandoned m4.xlarge instances (forgotten auto-scaling group, anyone?)results in a $732/month cost reduction.
 
-### ec2-terminate-old-instances
+#### ebs-delete-unattached-volumes
 
-This policy terminates instances that are older than 30 days. Not something you'd want to run in production, but ideal for sandbox/dev accounts where resources tend to get created...and forgotten. Cleaning up just 5 abandoned m4.xlarge instances (forgotten auto-scaling group, anyone?)results in a $732/month cost reduction.
+What to do with orphaned EBS volumes you're no longer using? Delete them! This deletes any EBS volume that's not attached to an instance. Again, not something you'd want to run in prod, but a handy tool for dev accounts.
 
-### ebs-delete-unattached-volumes
+### <a id="tagging"></a>Tagging enforcement
 
-What to do with orphaned EBS volumes you're no longer using? Delete them! This deletes any EBS volume that's not attached to an instance.
+- Cloud Custodian policy file: `tagging.yml`
+- IAM policy file: `tagging-permissions.json`
+
+Policies:
+
+#### ec2-tag-instances
+
+This tags instances with `Custodian: true` as they enter the running state. All other policies are applied to resources with this tag. If a resource is not intended to be managed by Custodian policies, the tag can be removed.
+
+
+### <a id="security_general"></a>Security remediations - general resources
+
+- Cloud Custodian policy file: `security.yml`
+- IAM policy file: `security-permissions.json`
+
+Policies:
+
+#### s3-revoke-global-access
+
+Need something to take action immediately if a bucket is created with (or given) a public ACL? Even though ACLs are being deprecated in favor of bucket policies, it still happens. This policy watches for the relevant CloudTrail events, and then removes public grants if they are found.
+
+#### security-group-revoke-global-ssh-on-creation
+
+Creating a security group that opens up SSH to the world is a bad idea. This policy stops it. When a CloudTrail event associated with security group rule creation comes in, it detects whether it allows SSH from anywhere - and promptly removes the rule if it does.
+
+#### security-group-revoke-all-tcp-global-on-creation
+
+Like the "global SSH is a bad thing" policy (above), this one watches for the creation of security group rules allowing access to the world on all port ranges...and then deletes those rules.
+
+### <a id="security_iam"></a>Security remediations - IAM
+
+- Cloud Custodian policy file: `iam.yml`
+- IAM policy file: `iam-permissions.json`
+
+These policies are in a separate file because all IAM-related policies must be run in `us-east-1` (the home of IAM). Policies:
+
+#### iam-policy-notify-on-admin-policy-attachment
+
+Want to know when some attaches a policy with admin (* on *) privileges to a user, group, or role? This is your policy.
+
+#### iam-policy-notify-on-admin-policy-creation
+
+If you want to take this admin-permissions thing one step further, this policy will alert you when a policy is created with * on * permissions.
 
 ## <a id="prerequisites"></a>Prerequisites
 
@@ -101,61 +154,7 @@ custodian schema EC2.filters.instance-age
 
 ### Configure the IAM role
 
-Before running the policy, you'll need to give the resulting lambda function the permissions required. The following policy will work; you will likely want to restrict it further to suit your needs. Create a role that uses this policy, and then update the ARN of the role in the `policy.yml` file.
-
-``` JSON
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "logs:CreateLogStream",
-                "logs:DescribeLogGroups",
-                "logs:DescribeLogStreams",
-                "logs:GetLogEvents",
-                "logs:FilterLogEvents",
-                "logs:CreateLogGroup",
-                "logs:PutLogEvents"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "cloudwatch:GetMetricStatistics",
-                "cloudwatch:PutMetricData"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ec2:DescribeInstances",
-                "ec2:CreateTags",
-                "ec2:StopInstances",
-                "ec2:StartInstances",
-                "ec2:ModifyInstanceAttribute"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ec2:TerminateInstances"
-            ],
-            "Resource": "arn:aws:ec2:us-west-2:*:instance/*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ec2:DeleteVolume"
-            ],
-            "Resource": "arn:aws:ec2:us-west-2:*:volume/*"
-        }
-    ]
-}
-```
+Before running the policy, you'll need to give the resulting Lambda function the permissions required. Use the IAM policy provided for each Cloud Custodian policy file as a starting place: create the policy, attach it to a new role, and update the Cloud Custodian policy with the ARN of that role.
 
 ### Validate the policies
 
@@ -184,6 +183,10 @@ custodian run -s . policy.yml
 ```
 
 Cloud Custodian will take care of creating the needed lambda functions, CloudWatch events, etc. Sit back and watch it work!
+
+### Set up the mailer
+
+Some of the policies send notifications via SNS, email, or Slack. To send notifications, you'll need to implement the Mailer tool in your account. Instructions on how to do this are in [usingTheMailer.md](usingTheMailer.md). An IAM policy with permissions required by the mailer is in [mailer-permissions.json](mailer-permissions.json).
 
 ## <a id="modes"></a>More About Modes
 
