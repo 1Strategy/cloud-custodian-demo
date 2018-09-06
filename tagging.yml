@@ -9,12 +9,10 @@ policies:
  # Remind instance creators to tag their instances with a CostCenter tag
   - name: ec2-notify-on-no-cost-center-tag
     resource: ec2
-    # use cloudtrail event, not ec2-instance-state, when you need to filter on an instance's tags (this will let any tagging Lambdas that are triggered by instance creation events take effect first)
     mode:
-      type: cloudtrail
-      role: arn:aws:iam::842337631775:role/custodian-ec2
-      events:
-        - RunInstances
+      type: periodic
+      role: arn:aws:iam::842337631775:role/custodian-tagging
+      schedule: "rate(1 day)"
     filters:
       - "tag:CostCenter": absent
     actions:
@@ -33,7 +31,7 @@ policies:
     # use cloudtrail event, not ec2-instance-state, when you need to filter on an instance's tags (this will let any tagging Lambdas that are triggered by instance creation events take effect first)
     mode:
       type: cloudtrail
-      role: arn:aws:iam::842337631775:role/custodian-ec2
+      role: arn:aws:iam::842337631775:role/custodian-tagging
       events:
         - RunInstances
     comment: |

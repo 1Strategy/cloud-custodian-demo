@@ -11,7 +11,7 @@ policies:
     resource: ec2
     mode:
       type: periodic
-      role: arn:aws:iam::842337631775:role/custodian-ec2
+      role: arn:aws:iam::842337631775:role/custodian-cost-control
       schedule: "rate(15 minutes)"
     filters:
       - "tag:Custodian": present
@@ -26,7 +26,7 @@ policies:
     resource: ec2
     mode:
       type: periodic
-      role: arn:aws:iam::842337631775:role/custodian-ec2
+      role: arn:aws:iam::842337631775:role/custodian-cost-control
       schedule: "rate(15 minutes)"
     filters:
       - "tag:Custodian": present
@@ -45,7 +45,7 @@ policies:
     resource: ec2
     mode:
       type: periodic
-      role: arn:aws:iam::842337631775:role/custodian-ec2
+      role: arn:aws:iam::842337631775:role/custodian-cost-control
       schedule: "rate(1 day)"
       # default timeout of 60 seconds isn't long enough to resize
       timeout: 180
@@ -74,7 +74,7 @@ policies:
     resource: ec2
     mode:
       type: periodic
-      role: arn:aws:iam::842337631775:role/custodian-ec2
+      role: arn:aws:iam::842337631775:role/custodian-cost-control
       schedule: "rate(1 day)"
     comment: |
       # Terminate all instances that are tagged Custodian, and older than 30 days
@@ -98,7 +98,7 @@ policies:
     resource: ebs
     mode:
       type: periodic
-      role: arn:aws:iam::842337631775:role/custodian-ec2
+      role: arn:aws:iam::842337631775:role/custodian-cost-control
       schedule: "rate(1 day)"
     filters:
       - "tag:Custodian": present

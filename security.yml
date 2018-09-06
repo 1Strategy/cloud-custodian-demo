@@ -12,7 +12,7 @@ policies:
     resource: s3
     mode:
       type: cloudtrail
-      role: arn:aws:iam::842337631775:role/cloud-custodian-demo
+      role: arn:aws:iam::842337631775:role/custodian-security
       events:
         - CreateBucket # "CreateBucket" is one of the shortcuts available in c7n to reference a specific CloudTrail event
         - source: s3.amazonaws.com
@@ -44,7 +44,7 @@ policies:
     resource: security-group
     mode:
       type: cloudtrail
-      role: arn:aws:iam::842337631775:role/cloud-custodian-demo
+      role: arn:aws:iam::842337631775:role/custodian-security
       events:
         - source: ec2.amazonaws.com
           event: AuthorizeSecurityGroupIngress
@@ -76,7 +76,7 @@ policies:
     resource: security-group
     mode:
       type: cloudtrail
-      role: arn:aws:iam::842337631775:role/cloud-custodian-demo
+      role: arn:aws:iam::842337631775:role/custodian-security
       events:
         - source: ec2.amazonaws.com
           event: AuthorizeSecurityGroupIngress

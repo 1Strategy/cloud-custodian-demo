@@ -54,10 +54,13 @@ What to do with orphaned EBS volumes you're no longer using? Delete them! This d
 
 Policies:
 
-#### ec2-tag-instances
+#### ec2-tag-instances-with-custodian-tag
 
-This tags instances with `Custodian: true` as they enter the running state. All other policies are applied to resources with this tag. If a resource is not intended to be managed by Custodian policies, the tag can be removed.
+This tags instances with `Custodian: true` as they enter the running state, to signify that the resource is being managed by Cloud Custodian. All other policies are applied to resources with this tag. If a resource is not intended to be managed by Custodian policies, the tag can be removed.
 
+#### ec2-notify-on-no-cost-center-tag
+
+Let's say that you want to have all instances tagged with a `CostCenter` tag. However, people are people, which means they'll forget to add tags. Every day, this will find instances that don't have these tags, and send emails to the owners of these resources. (This assumes that instances have an OwnerContact tag that contains an email address for the person who created it.)
 
 ### <a id="security_general"></a>Security remediations - general resources
 

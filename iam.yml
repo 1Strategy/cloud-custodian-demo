@@ -11,7 +11,7 @@ policies:
     resource: iam-policy
     mode:
       type: cloudtrail
-      role: arn:aws:iam::842337631775:role/cloud-custodian-demo
+      role: arn:aws:iam::842337631775:role/custodian-iam
       events:
         - source: iam.amazonaws.com
           event: AttachGroupPolicy
@@ -43,7 +43,7 @@ policies:
     resource: iam-policy
     mode:
       type: cloudtrail
-      role: arn:aws:iam::842337631775:role/cloud-custodian-demo
+      role: arn:aws:iam::842337631775:role/custodian-iam
       events:
         - source: iam.amazonaws.com
           event: CreatePolicy
