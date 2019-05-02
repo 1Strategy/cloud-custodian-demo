@@ -16,7 +16,7 @@
 
 [Cloud Custodian](https://developer.capitalone.com/opensource-projects/cloud-custodian) is a rules engine for managing AWS resources at scale. You define the rules that your resources should follow, and Cloud Custodian automatically provisions event sources and AWS Lambda functions to enforce those rules. Instead of writing custom serverless workflows, you can manage resources across all of your accounts via simple YAML files.
 
-Cloud Custodian documentation: [here](http://capitalone.github.io/cloud-custodian/docs/index.html)
+Cloud Custodian documentation: [here](https://cloudcustodian.io/docs/quickstart/index.html#)
 
 ## <a id="demo_policies"></a>The Demo Policies
 
