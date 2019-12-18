@@ -13,14 +13,14 @@ Cloud Custodian has a number of add-on "tools" that accomplish different jobs: s
 
 The mailer tool is one element in the overall workflow of sending notifications via Cloud Custodian. The overall flow is as follows; each step is described in more detail below.
 
-1. Notifiaction actions
+1. Notification actions
 2. SQS queue
 3. Mailer Lambda function
 4. SES
 
 ### Notification actions
 
-Cloud Custodian policies filter resources and then stipluate actions to be taken on those resources. Oftentimes, actions are remediation-based: tagging a resource, turning an instance on or off, or removing ACLs that allow public access from an S3 bucket.
+Cloud Custodian policies filter resources and then stipulate actions to be taken on those resources. Oftentimes, actions are remediation-based: tagging a resource, turning an instance on or off, or removing ACLs that allow public access from an S3 bucket.
 
 An action can also send notifications. The `notify`-type action specifies the notification content, destination, and delivery mechanism. An explanation of how to write `notify` actions is in the "Setting up the mailer" section, below.
 
@@ -151,7 +151,7 @@ The above policy finds any instance older than 30 days that doesn't have a `Keep
 - Marks those instances for deletion in 4 days
 - Sends a message to an SQS queue. The message contents include a list of notification targets (e.g. emails, SNS topics, etc.), a subject, and the list of filtered resources.
 
-Here's the fields typically found in a `notify` action:
+Here are the fields typically found in a `notify` action:
 
 - `type: notify` - this is required to create a notify action
 - `template` - the resulting emails can use any number of preformatted templates. You can also create your own; see the "Writing a Template" section of the [docs](https://github.com/capitalone/cloud-custodian/tree/master/tools/c7n_mailer) for instructions on how to do this. Here, we're using the default template that comes with Cloud Custodian.
