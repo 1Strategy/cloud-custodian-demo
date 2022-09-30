@@ -61,6 +61,7 @@ Then, install dependencies and extensions:
 
 ```bash
 virtualenv c7n_mailer
+pip install c7n-mailer
 source c7n_mailer/bin/activate
 cd tools/c7n_mailer
 pip install -r requirements.txt
